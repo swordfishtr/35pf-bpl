@@ -1,0 +1,31 @@
+{
+    "manifest_version": 3,
+    "name": "35pf-webrequest",
+    "description": "35pf-webrequest",
+    "version": "0.1",
+    "icons": {
+        "16": "35_logo.PNG",
+        "32": "35_logo.PNG",
+        "48": "35_logo.PNG",
+        "128": "35_logo.PNG"
+    },
+    "permissions": [
+        "storage",
+        "webRequest",
+        "webRequestBlocking",
+        "webRequestFilterResponse"
+    ],
+    "background": {
+        "service_worker": "background.js",
+        "scripts": ["background.js"]
+    },
+    "host_permissions": [
+        "https://play.pokemonshowdown.com/*",
+        "https://samuel-peter-chowdhury.github.io/*"
+    ],
+    "browser_specific_settings": {
+        "gecko": {
+            "id": "35pf_webrequest.demirab1@smogon"
+        }
+    }
+}

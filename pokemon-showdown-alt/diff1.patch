@@ -1,0 +1,220 @@
+--- search-og.js	2024-10-11 19:55:56.569662373 +0300
++++ search.js	2024-10-12 03:44:45.371262611 +0300
+@@ -8,6 +8,75 @@
+  *
+  * @author Guangcong Luo <guangcongluo@gmail.com>
+  */
++const metaList = ["2023_7", "2023_8", "2023_9", "2023_10", "2023_10_B", "2023_11", "2023_12", "2024_1", "2024_2", "2024_3", "2024_4", "2024_5", "2024_6", "2024_7", "2024_8", "2024_9", "2024_10"];
++const challengeCodePrefix = '/challenge gen9nationaldexag @@@ Z-Move Clause, -Mega, Terastal Clause, Sleep Clause Mod, Forme Clause, -Hidden Power, -Last Respects, -Kings Rock, -Shadow Tag, -Acupressure, -Battle Bond, -Quick Claw, -Razor Fang, Evasion Clause, OHKO Clause, baton pass stat trap clause, -All Pokemon, +';
++const metaMap = new Map();
++metaList.forEach((date) => {
++	$.getJSON(`https://samuel-peter-chowdhury.github.io/35PokesShowdownFilter/dates/${date}.json`, function(data) {
++		const set = new Set(data);
++		metaMap.set(date, set);
++	});
++});
++
++let yearFilter = localStorage.getItem("35-pokes-year");
++if (!yearFilter) {
++	yearFilter = 2024;
++	localStorage.setItem("35-pokes-year", yearFilter);
++}
++let monthFilter = localStorage.getItem("35-pokes-month");
++if (!monthFilter) {
++	monthFilter = 2;
++	localStorage.setItem("35-pokes-month", monthFilter);
++}
++let altFilter = localStorage.getItem("35-pokes-alt");
++if (!altFilter) {
++	altFilter = '';
++	localStorage.setItem("35-pokes-alt", altFilter);
++}
++let powerState = localStorage.getItem("35-pokes-power");
++if (!powerState) {
++	powerState = true;
++	localStorage.setItem("35-pokes-power", powerState);
++}
++
++function getMeta(year, month, alt) {
++	return `${String(year)}_${String(month)}${(alt != '' && alt != undefined && alt != null) ? ('_' + alt) : ''}`;
++}
++
++function fallbackCopyTextToClipboard(text) {
++	var textArea = document.createElement("textarea");
++	textArea.value = text;
++	
++	textArea.style.top = "0";
++	textArea.style.left = "0";
++	textArea.style.position = "fixed";
++  
++	document.body.appendChild(textArea);
++	textArea.focus();
++	textArea.select();
++  
++	try {
++	  var successful = document.execCommand('copy');
++	  var msg = successful ? 'successful' : 'unsuccessful';
++	  console.log('Fallback: Copying text command was ' + msg);
++	} catch (err) {
++	  console.error('Fallback: Oops, unable to copy', err);
++	}
++	
++	document.body.removeChild(textArea);
++}
++
++function copyTextToClipboard(text) {
++	if (!navigator.clipboard) {
++	  fallbackCopyTextToClipboard(text);
++	  return;
++	}
++	navigator.clipboard.writeText(text).then(function() {
++	  console.log('Async: Copying to clipboard was successful!');
++	}, function(err) {
++	  console.error('Async: Could not copy text: ', err);
++	});
++}
+ 
+ (function (exports, $) {
+ 	'use strict';
+@@ -53,6 +122,39 @@
+ 			self.sortCol = self.engine.sortCol;
+ 			self.find('');
+ 		});
++		this.$el.on('click', '#35-pokes-filter-button', function (e) {
++			e.preventDefault();
++			e.stopPropagation();
++			let tempYear = document.getElementById("35-pokes-year").value;
++			let tempMonth = document.getElementById("35-pokes-month").value;
++			let tempAlt = document.getElementById("35-pokes-alt").value;
++			if (metaMap.has(getMeta(tempYear, tempMonth, tempAlt))) {
++				yearFilter = tempYear;
++				localStorage.setItem("35-pokes-year", yearFilter);
++				monthFilter = tempMonth;
++				localStorage.setItem("35-pokes-month", monthFilter);
++				altFilter = tempAlt;
++				localStorage.setItem("35-pokes-alt", altFilter);
++				self.renderedIndex = 0;
++				self.renderingDone = false;
++				self.updateScroll();
++			}
++		});
++		this.$el.on('click', '#35-pokes-power-button', function (e) {
++			e.preventDefault();
++			e.stopPropagation();
++			powerState = !powerState;
++			localStorage.setItem("35-pokes-power", powerState);
++			self.renderedIndex = 0;
++			self.renderingDone = false;
++			self.updateScroll();
++		});
++		this.$el.on('click', '#35-pokes-copy-button', function (e) {
++			e.preventDefault();
++			e.stopPropagation();
++			const pokemonList = Array.from(metaMap.get(getMeta(yearFilter, monthFilter, altFilter))).join(', +');
++			copyTextToClipboard(challengeCodePrefix + pokemonList);
++		});
+ 	}
+ 
+ 	Search.prototype.$ = function (query) {
+@@ -126,6 +228,7 @@
+ 		if (finalIndex < i + 20) finalIndex = i + 20;
+ 		if (bottom - top > windowHeight && !i) finalIndex = 20;
+ 		if (forceAdd && finalIndex > i + 40) finalIndex = i + 40;
++		if (powerState) finalIndex = 9999;
+ 
+ 		var resultSet = this.resultSet;
+ 		var buf = '';
+@@ -155,7 +258,7 @@
+ 			i++;
+ 		}
+ 		if (!this.renderedIndex) {
+-			this.el.innerHTML = '<ul class="utilichart" style="height:' + (resultSet.length * 33) + 'px">' + buf + (!this.renderingDone ? '<li class="result more"><p><button class="button big">More</button></p></li>' : '') + '</ul>';
++			this.el.innerHTML = `<ul class="utilichart" style="height: ${powerState ? 'fit-content' : resultSet.length * 33}">` + buf + (!this.renderingDone ? '<li class="result more"><p><button class="button big">More</button></p></li>' : '') + '</ul>';
+ 			this.moreVisible = true;
+ 		} else {
+ 			if (this.moreVisible) {
+@@ -191,17 +294,44 @@
+ 		case 'html':
+ 			return '<li class="result">' + id + '</li>';
+ 		case 'header':
+-			return '<li class="result"><h3>' + id + '</h3></li>';
++			if (powerState) {
++				const lowerId = id.toLowerCase();
++				if (lowerId.includes('items') || lowerId.includes('abilit') || lowerId.includes('moves')) {
++					return '<li class="result"><h3>' + id + '</h3></li>';
++				} else {
++					return '';
++				}
++			} else {
++				return '<li class="result"><h3>' + id + '</h3></li>';
++			}
+ 		case 'sortpokemon':
+ 			return this.renderPokemonSortRow();
+ 		case 'sortmove':
+ 			return this.renderMoveSortRow();
+ 		case 'pokemon':
+ 			var pokemon = this.engine.dex.species.get(id);
+-			return this.renderPokemonRow(pokemon, matchStart, matchLength, errorMessage, attrs);
++			if (powerState) {
++				const lowerName = BattleLog.escapeHTML(pokemon.name).toLowerCase();
++				if (metaMap.get(getMeta(yearFilter, monthFilter, altFilter)).has(lowerName)) {
++					return this.renderPokemonRow(pokemon, matchStart, matchLength, errorMessage, attrs);
++				} else {
++					return '';
++				}
++			} else {
++				return this.renderPokemonRow(pokemon, matchStart, matchLength, errorMessage, attrs);
++			}
+ 		case 'move':
+ 			var move = this.engine.dex.moves.get(id);
+-			return this.renderMoveRow(move, matchStart, matchLength, errorMessage, attrs);
++			if (powerState) {
++				var name = move.name.toLowerCase();
++				if (name.includes('hidden power')) {
++					return '';
++				} else {
++					return this.renderMoveRow(move, matchStart, matchLength, errorMessage, attrs);
++				}
++			} else {
++				return this.renderMoveRow(move, matchStart, matchLength, errorMessage, attrs);
++			}
+ 		case 'item':
+ 			var item = this.engine.dex.items.get(id);
+ 			return this.renderItemRow(item, matchStart, matchLength, errorMessage, attrs);
+@@ -259,7 +389,35 @@
+ 		return 'Error: not found';
+ 	};
+ 	Search.prototype.renderPokemonSortRow = function () {
+-		var buf = '<li class="result"><div class="sortrow">';
++		var buf = '<li class="result" style="display: flex; align-items: center; padding: 0 10px; justify-content: space-between">'
++		buf += '<div style="display: flex; align-items: center;">'
++		buf += '<select id="35-pokes-month" name="35-pokes-month" class="button" style="margin-right: 5px;">'
++		buf += `<option value="1"${monthFilter == 1 ? ' selected="selected"' : ''}">Jan</option>`
++		buf += `<option value="2"${monthFilter == 2 ? ' selected="selected"' : ''}">Feb</option>`
++		buf += `<option value="3"${monthFilter == 3 ? ' selected="selected"' : ''}">Mar</option>`
++		buf += `<option value="4"${monthFilter == 4 ? ' selected="selected"' : ''}">Apr</option>`
++		buf += `<option value="5"${monthFilter == 5 ? ' selected="selected"' : ''}">May</option>`
++		buf += `<option value="6"${monthFilter == 6 ? ' selected="selected"' : ''}">Jun</option>`
++		buf += `<option value="7"${monthFilter == 7 ? ' selected="selected"' : ''}">Jul</option>`
++		buf += `<option value="8"${monthFilter == 8 ? ' selected="selected"' : ''}">Aug</option>`
++		buf += `<option value="9"${monthFilter == 9 ? ' selected="selected"' : ''}">Sep</option>`
++		buf += `<option value="10"${monthFilter == 10 ? ' selected="selected"' : ''}">Oct</option>`
++		buf += `<option value="11"${monthFilter == 11 ? ' selected="selected"' : ''}">Nov</option>`
++		buf += `<option value="12"${monthFilter == 12 ? ' selected="selected"' : ''}">Dec</option>`
++		buf += '</select>'
++		buf += '<select id="35-pokes-year" name="35-pokes-year" class="button" style="margin-right: 5px;">'
++		buf += `<option value="2023"${yearFilter == 2023 ? ' selected="selected"' : ''}">2023</option>`
++		buf += `<option value="2024"${yearFilter == 2024 ? ' selected="selected"' : ''}">2024</option>`
++		buf += '</select>'
++		buf += `<input type="text" id="35-pokes-alt" name="35-pokes-alt" class="textbox" value="${altFilter}" style="width: 50px; height: 18px; margin-right: 5px;">`
++		buf += '<button id="35-pokes-filter-button" name="35-pokes-filter-button" class="button" style="height: 24px; margin-right: 5px;">Filter</button>'
++		buf += '<button id="35-pokes-copy-button" name="35-pokes-copy-button" class="button" style="height: 24px;">Challenge Code</button>'
++		buf += '</div>'
++		buf += '<div style="display: flex; align-items: center;">'
++		buf += `<button id="35-pokes-power-button" name="35-pokes-power-button" class="button" style="height: 24px; margin-right: 12px;"><i class="fa fa-power-off" style="color: ${powerState ? '#008000' : '#b22222'};"></i></button>`
++		buf += '</div>'
++		buf += '</li>';
++		buf += '<li class="result"><div class="sortrow">';
+ 		buf += '<button class="sortcol numsortcol' + (!this.sortCol ? ' cur' : '') + '">' + (!this.sortCol ? 'Sort: ' : this.engine.firstPokemonColumn) + '</button>';
+ 		buf += '<button class="sortcol pnamesortcol' + (this.sortCol === 'name' ? ' cur' : '') + '" data-sort="name">Name</button>';
+ 		buf += '<button class="sortcol typesortcol' + (this.sortCol === 'type' ? ' cur' : '') + '" data-sort="type">Types</button>';
