@@ -26,7 +26,8 @@
     ],
     "host_permissions": [
         "https://play.pokemonshowdown.com/*",
-        "https://samuel-peter-chowdhury.github.io/*"
+        "https://samuel-peter-chowdhury.github.io/*",
+        "https://swordfishtr.github.io/*"
     ],
     "declarative_net_request" : {
         "rule_resources" : [{
