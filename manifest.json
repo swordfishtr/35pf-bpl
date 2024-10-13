@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
-    "name": "35pf-webrequest",
-    "description": "35pf-webrequest",
+    "name": "35pf-bpl",
+    "description": "35pf-bpl",
     "version": "0.1",
     "icons": {
         "16": "35_logo.PNG",
@@ -9,23 +9,35 @@
         "48": "35_logo.PNG",
         "128": "35_logo.PNG"
     },
-    "permissions": [
-        "storage",
-        "webRequest",
-        "webRequestBlocking",
-        "webRequestFilterResponse"
-    ],
     "background": {
         "service_worker": "background.js",
         "scripts": ["background.js"]
     },
+    "content_scripts": [
+        {
+          "matches": ["https://play.pokemonshowdown.com/*"],
+          "js": ["content.js"],
+          "run_at": "document_start"
+        }
+    ],
+    "permissions": [
+        "declarativeNetRequestWithHostAccess",
+        "scripting"
+    ],
     "host_permissions": [
         "https://play.pokemonshowdown.com/*",
         "https://samuel-peter-chowdhury.github.io/*"
     ],
+    "declarative_net_request" : {
+        "rule_resources" : [{
+            "id": "35pf_ruleset",
+            "enabled": true,
+            "path": "ruleset.json"
+        }]
+    },
     "browser_specific_settings": {
         "gecko": {
-            "id": "35pf_webrequest.demirab1@smogon"
+            "id": "35pf_bpl.demirab1@smogon"
         }
     }
 }
