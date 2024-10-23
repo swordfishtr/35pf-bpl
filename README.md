@@ -1,11 +1,21 @@
-# 35 Pokes Filter (alt alt) (wip) (block-patch-load)
+# 35 Pokes Filter (block-patch-load)
 
-demo using declarativeNetRequest + scripting to "intercept" search.js
+Intercept [Pokemon Showdown Client](https://github.com/smogon/pokemon-showdown-client) files to implement custom functionality for the 35Pokes community.
 
-## credits for search.js and edits:
-https://github.com/smogon/pokemon-showdown-client
-https://github.com/samuel-peter-chowdhury/pokemon-showdown-alt
-https://github.com/samuel-peter-chowdhury/PokemonShowdownFilter
+This is a diff-utilizing version of [Sam's extension](https://github.com/samuel-peter-chowdhury/PokemonShowdownFilter). There are some benefits in doing so:
 
-## icon from:
-https://github.com/samuel-peter-chowdhury/35PokesShowdownFilter
+- Changes on Showdown's end are reflected in the extension with no need for maintainer involvement.
+
+- Allows cross-extension compatibility with forks from other communities in the future.
+
+There are some drawbacks, too:
+
+- This requires an additional scripting permission (technically only necessary for Chromium users, but we're developing cross-browser).
+
+- Downloads extra files (the patched code and corresponding snapshots to create diffs).
+
+We do this by ... (todo)
+
+Diff patching API: https://github.com/dmsnell/diff-match-patch
+
+Icon: https://github.com/samuel-peter-chowdhury/35PokesShowdownFilter/blob/main/images/35_logo.PNG
