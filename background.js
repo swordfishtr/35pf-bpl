@@ -1,29 +1,31 @@
+/* ROADMAP:
+We will use the friends array to determine which extension gets to inject the final script.
+IDs are ordered by priority; if all of them are present, friends[0] gets to do it.
+Establish currently installed friends via FriendHello.
+If all higher priority extensions are absent, perform the injection.
+Otherwise message the higher priority extensions with your non-final files.
+Our policy will be to add newer extensions further back because older extensions likely won't be aware of the newer ones and want to perform the injection.
+It should be possible to have the extensions [A,B,C] where A isn't aware of C, but B is, so A gets passed C's patches regardless. (confirmed this works)
+Extensions with compat_external disabled should behave as usual except they should not apply their own patches.
+
+We should reduce fetch usage for cases like several tabs loading Showdown successively/in parallel.
+It is also possible to store patches or even patched documents for reuse limited to some arbitrary time TBD. */
+
 import { diff_match_patch } from "./index.js";
 const DMP = new diff_match_patch();
 
 // Polyfill for browser compatibility
 if (typeof browser === "undefined") globalThis.browser = chrome;
 
-console.log(browser.runtime.id);
+console.log("My id: " + browser.runtime.id);
 
-const KEY_PATCHES = "patches";
+//const KEY_PATCHES = "patches";
 const KEY_COMPAT_EXTERNAL = "compat_external";
-const KEY_EXTERNAL_PREFIX = "patches_";
+//const KEY_EXTERNAL_PREFIX = "patches_";
 const KEY_PATCH_ORDER = "patchOrder";
 
 const MSG_HELLO = "FriendHello";
 const MSG_ACKNOWLEDGE = "Acknowledge";
-
-// TODO: (roadmap)
-// We will use this array to determine which extension gets to inject the final script.
-// IDs are ordered by priority; if all of them are present, friends[0] gets to do it.
-// Establish currently installed friends via FriendHello.
-// If all higher priority extensions are absent, perform the injection.
-// Otherwise message the higher priority extensions with your non-final files.
-// Our policy will be to add newer extensions further back because older extensions likely won't be aware of the newer ones and want to perform the injection.
-// It should be possible to have the extensions [A,B,C] where A isn't aware of C, but B is, so A gets passed C's patches regardless.
-// Extensions with compat_external disabled should behave as usual except they should not apply their own patches.
-// We must take the messaging api very seriously.
 
 // Highest priority to lowest. Make sure for each extension that its IDs for various browsers are adjacent.
 const friends = [
@@ -35,21 +37,22 @@ const friends = [
 
 const tabList = [];
 
-browser.runtime.onMessage.addListener(psLoaded);
-browser.runtime.onMessageExternal.addListener(receiveMessage);
-
 // Startup ping, wait a little for the other extensions to load just in case.
 setTimeout(sendFriendHello, 50);
+
+browser.runtime.onMessage.addListener(psLoaded);
+browser.runtime.onMessageExternal.addListener(receiveMessage);
 
 async function psLoaded(msg, sender, sendResponse) {
     if(msg !== "35pf") return;
 
+    await sendFriendHello();
+
     const stored = await browser.storage.local.get({
-        [KEY_PATCHES]: null, // TODO: implement (optimization)
-        [KEY_COMPAT_EXTERNAL]: true, // TODO: off by default for security reasons (one below also)
+        //[KEY_PATCHES]: null, // TODO: implement (optimization)
+        [KEY_COMPAT_EXTERNAL]: true,
         [KEY_PATCH_ORDER]: friends
     });
-    console.log(stored[KEY_PATCH_ORDER]); //-
 
     if(stored[KEY_PATCH_ORDER][0] === browser.runtime.id) tabList.push(sender.tab.id);
 
@@ -58,7 +61,6 @@ async function psLoaded(msg, sender, sendResponse) {
     // If not wait for our turn.
     const len = stored[KEY_PATCH_ORDER].length;
     if(len === 1) {
-        console.log(1); //-
         const patches = await fetchMods(true);
         browser.scripting.executeScript({
             target: { tabId: tabList.shift() },
@@ -104,7 +106,7 @@ async function fetchMods(solo) {
 // This is ping. Determine which compatible extensions are present.
 function sendFriendHello() {
 
-    Promise.all(friends.map(async (id, index) => {
+    return Promise.all(friends.map(async (id, index) => {
 
         // No need to message self
         if(id === browser.runtime.id) return id;
@@ -113,9 +115,6 @@ function sendFriendHello() {
             const answer = await browser.runtime.sendMessage(id, MSG_HELLO);
             if(answer === MSG_ACKNOWLEDGE) {
                 console.log("Hello acknowledged by " + id);
-
-                console.log(index); //-
-
                 return id;
             }
             else if(answer) {
@@ -131,11 +130,11 @@ function sendFriendHello() {
         // 1. if we are the one to perform injection (if we are index 0)
         // 2. who to accept patches from (our index + 1 if that exists, otherwise start the chain with our modified files)
         browser.storage.local.set({ [KEY_PATCH_ORDER]: patchOrder.filter(n => n) });
-        console.log(patchOrder.filter(n => n)); //-
     });
     
 }
 
+// TODO: Use [KEY_PATCH_ORDER]:friends here instead of friends
 function sendPatchedFiles(files) {
     //           string for now ^
 
@@ -190,7 +189,6 @@ function receiveMessage(msg, sender, sendResponse) {(async () => {
             else injection = msg;
 
             if(myIndex === 0) {
-                console.log(2); //-
 
                 const result = await browser.scripting.executeScript({
                     target: { tabId: tabList.shift() },
